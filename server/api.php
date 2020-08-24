@@ -91,7 +91,7 @@ $state = get_config();
 $method = $_SERVER['REQUEST_METHOD'];
 
 if ($method == 'GET') {
-  $unit = substr($_GET['unit'], 0, 16);
+  $unit = substr($_GET['name'], 0, 16);
   if (strlen($unit) > 0) {
     echo prepare_unit_data($state, $unit);
   } else {

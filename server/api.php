@@ -1,11 +1,6 @@
 <?php
 /* Air Conditioning settings */
-define(API_VERSION, 1);
-define(CONFIG_FILE, './config');
-define(DELIMITER, ';');
-define(UNIT_MODES, ['cold' => 1, 'hot' => 2, 'dry' => 3, 'vent' => 4]);
-
-include_once('./secret.php');
+include_once dirname(__FILE__) . '/inc/index.php';
 
 /* just for reference */
 $unit_template = array(
@@ -19,20 +14,6 @@ $unit_template = array(
 
 $unit = '';
 $state = null;
-
-function get_config() {
-  $state_ = null;
-  $config_value = file_get_contents(CONFIG_FILE);
-  if (strlen($config_value) > 0) {
-    $state_ = json_decode($config_value, TRUE);
-  }
-  if ($state_['api'] != API_VERSION) {
-    header("HTTP/1.1 500 Server Error");
-    echo "500 Server Error";
-    return;
-  }
-  return $state_;
-}
 
 function prepare_unit_data($state_, $unit_) {
   $found = filter_units($state_, $unit_);
@@ -57,6 +38,7 @@ function filter_units($state_, $unit_) {
 
 function valid_ac_values($item) {
   global $unit;
+  // only name is string
   if ($item == $unit) {
     return $item;
   }
@@ -70,6 +52,10 @@ function update_unit($state_, $unit_, $updated) {
   }
   $valid_keys = array_intersect_key($updated, $found);
   $valid_values = array_map('valid_ac_values', $valid_keys);
+  $valid_values['update'] = ++$found['update'];
+  if ($valid_values['update'] == 100) {
+    $valid_values['update'] = 0;
+  }
 
   for($i = 0; $i < count($state_['units']); $i++) {
     if ($state_['units'][$i]['name'] == $unit_) {
@@ -81,13 +67,8 @@ function update_unit($state_, $unit_, $updated) {
   return true;
 }
 
-function save_state($state_) {
-  $state_json = json_encode($state_);
-  file_put_contents(CONFIG_FILE, $state_json);
-}
-
 // getting config
-$state = get_config();
+$state = get_state();
 $method = $_SERVER['REQUEST_METHOD'];
 
 if ($method == 'GET') {
@@ -98,20 +79,44 @@ if ($method == 'GET') {
     echo urlencode(json_encode($state));
   }
 } else if ($method == 'POST') {
-  if (strcmp($_POST['secret'], SECRET)) {
-    return header('HTTP/1.1 403 Forbidden');
+  $from_site = isset($_POST['from_site']);
+  $user_secret = filter_var( $_POST['secret'], FILTER_SANITIZE_STRING);
+  $user_secret_hash = password_hash($user_secret, PASSWORD_BCRYPT, ['salt' => SALT]);
+  if (!hash_equals($user_secret_hash, SECRET)) {
+    header('HTTP/1.1 403 Forbidden');
+    if ($from_site) {
+      return header('Location: ./index.php?updated=0');
+    } else {
+      return;
+    }
   }
 
-  $unit = substr($_POST['name'], 0, 16);
+  $unit = filter_var($_POST['name'], FILTER_SANITIZE_STRING);
   if (strlen($unit) > 0) {
     $update = update_unit($state, $unit, $_POST);
     if ($update == true) {
-      return header("HTTP/1.1 200 OK");
+      if ($from_site) {
+        return header('Location: ./index.php?updated=1');
+      } else {
+        header("HTTP/1.1 200 OK");
+        echo "Updated";
+        return;
+      }
     } else {
-      return header("HTTP/1.1 500 Server Error");
+      if ($from_site) {
+        header('Location: ./index.php?updated=0');
+      } else {
+        header("HTTP/1.1 500 Server Error");
+      }
+      return;
     }
   } else {
-    return header('HTTP/1.1 400 Bad Request');
+    if ($from_site) {
+      header('Location: ./index.php?updated=0');
+    } else {
+      header('HTTP/1.1 400 Bad Request');
+    }
+    return;
   }
 }
 

@@ -70,9 +70,12 @@ function unit_template($unit) {
   <header>
     <title>Home Automation AC Controls</title>
     <link rel="stylesheet" type="text/css" href="./style.css" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   </header>
   <body>
     <div class="app">
+      <h1>Home Automation AC Controls 💨</h1>
       <?php if (isset($_GET['updated'])) {
         if ($_GET['updated'] == '1') { ?>
           <div class="notice success">
@@ -84,10 +87,12 @@ function unit_template($unit) {
           </div>
       <?php }} ?>
 
-      <?php foreach ($state['units'] as $unit) {
-          unit_template($unit);
-        }
-      ?>
+      <div class="units">
+        <?php foreach ($state['units'] as $unit) {
+            unit_template($unit);
+          }
+        ?>
+      </div>
     </div>
   </body>
 </html>

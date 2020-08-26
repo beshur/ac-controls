@@ -32,9 +32,19 @@ input[type='password'] {
   display: block;
   width: 120px;
 }
+label {
+  display: block;
+}
+
+.units {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+}
 
 .unit {
-  margin-bottom: 20px;;
+  margin-bottom: 20px;
+  padding-right: 100px;
 }
 
 .submit {
